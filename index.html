@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Квиз «Гражданин и Патриот» — Экран ведущего</title>
+    <!-- библиотеки -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <style>
+        /* Светлая тема, цвета БРСМ и флага */
+        :root {
+            --red: #d32f2f;
+            --green: #388e3c;
+            --bg-color: #f0f4f8;
+            --text-dark: #2c3e50;
+        }
+        
+        body { 
+            font-family: Arial, sans-serif; /* Arial надежнее */
+            background: linear-gradient(135deg, #f0f4f8, #e2ebf0); 
+            color: var(--text-dark); 
+            margin: 0; padding: 20px; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            min-height: 100vh; text-align: center; 
+        }
+        
+        .screen { width: 100%; max-width: 1100px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .hidden { display: none !important; }
+
+        /* Слайды */
+        #presentation-screen { width: 100%; max-width: 1000px; display: flex; flex-direction: column; align-items: center; }
+        
+        .slide-container {
+            width: 100%;
+            min-height: 55vh;
+            background: #ffffff; 
+            border: 2px solid var(--green); 
+            border-radius: 15px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 40px; box-sizing: border-box;
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .slide { display: none; width: 100%; }
+        .slide.active { display: block; }
+
+        .slide h2 { font-size: 2.8rem; color: var(--red); margin-top: 0; margin-bottom: 20px; }
+        .slide p { font-size: 1.5rem; line-height: 1.5; margin-bottom: 15px; text-align: left; }
+        .slide ul { font-size: 1.5rem; line-height: 1.6; text-align: left; margin: 0 auto; max-width: 850px; }
+        .slide .icon { font-size: 4rem; margin-bottom: 10px; display: block; text-align: center; }
+        
+        /* Кнопки */
+        .presentation-controls { display: flex; gap: 15px; }
+        .btn-nav { font-size: 1.4rem; padding: 15px 30px; background: var(--green); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .btn-nav:hover { background: #2e7d32; }
+        .btn-nav.secondary { background: #fff; color: var(--text-dark); border: 2px solid #ccc; }
+        
+        /* остальное */
+        #room-code { font-size: 5rem; font-weight: bold; letter-spacing: 10px; color: var(--red); margin: 10px 0; }
+        #qrcode-container { width: 250px; height: 250px; background: #fff; padding: 15px; border: 3px solid var(--red); border-radius: 10px; margin: 15px auto; display: flex; align-items: center; justify-content: center; }
+        #qrcode img { display: block; }
+        #qrcode canvas { display: none; } /* прячем дубль */
+        
+        .btn-start { font-size: 1.6rem; padding: 15px 40px; border: none; border-radius: 8px; cursor: pointer; margin: 10px; font-weight: bold; background: var(--red); color: #fff; }
+        .btn-start:hover { background: #b71c1c; }
+        .btn-start:disabled { background: #999; cursor: not-allowed; }
+        
+        .btn-difficulty { font-size: 1.3rem; padding: 10px 20px; background: #fff; color: var(--text-dark); border: 2px solid var(--text-dark); border-radius: 8px; cursor: pointer; margin: 5px; }
+        .btn-difficulty.selected { background: var(--green); color: white; border-color: var(--green); }
+        
+        #question-display { font-size: 2.2rem; max-width: 90%; margin: 20px auto; line-height: 1.4; font-weight: bold;}
+        #options-display { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 90%; max-width: 1000px; margin: 20px auto; }
+        .option { background: #fff; padding: 20px; border-radius: 10px; font-size: 1.3rem; border: 2px solid #ddd; text-align: left;}
+        .option.correct { background: #c8e6c9; border-color: var(--green); }
+        .option.incorrect { background: #ffcdd2; border-color: var(--red); opacity: 0.7;}
+        
+        #answers-count { font-size: 1.6rem; color: var(--green); margin: 15px; font-weight: bold;}
+        #player-list { font-size: 1.1rem; color: #666; margin-top: 15px; max-width: 600px; }
+        #comment-box { background: #fff9c4; border-left: 5px solid #fbc02d; padding: 15px; margin: 20px auto; max-width: 800px; text-align: left; font-size: 1.2rem; display: none; border-radius: 5px; color: #333;}
+        .accent { color: var(--red); }
+    </style>
+</head>
+<body>
+    
+    <!-- СЛАЙДЫ -->
+    <div id="presentation-screen" class="screen">
+        
+        <div class="slide-container">
+            <!-- 1 -->
+            <div class="slide active">
+                <span class="icon">🇧🇾</span>
+                <h2 style='text-align: center;'>Урок мужества</h2>
+                <p style='text-align: center; font-weight: bold;'>«Гражданин и Патриот»</p>
+                <p style="text-align: center; color: var(--green);">Программа «Шефская вертикаль»</p>
+            </div>
+
+            <!-- 2 -->
+            <div class="slide">
+                <span class="icon">📜</span>
+                <h2>Кто такой Гражданин?</h2>
+                <p>Гражданин — это человек, который принадлежит к своему государству и обладает правами и обязанностями.</p>
+                <ul>
+                    <li>✅ Знает и уважает <strong>Государственные символы</strong>.</li>
+                    <li>✅ Соблюдает законы и Конституцию.</li>
+                    <li>✅ Бережет историю и культуру страны.</li>
+                </ul>
+            </div>
+
+            <!-- 3 -->
+            <div class="slide">
+                <span class="icon">🛡️</span>
+                <h2>Символы нашей страны</h2>
+                <p>Символы — это лицо любого государства. Каждый обязан их уважать:</p>
+                <ul>
+                    <li>🚩 <strong>Флаг:</strong> Красный цвет означает мужество, зеленый — мир и леса, орнамент — историю.</li>
+                    <li>🌾 <strong>Герб:</strong> Контур страны, колосья и клевер символизируют мирный труд.</li>
+                    <li>🎵 <strong>Гимн:</strong> Торжественная песня, которую слушают стоя.</li>
+                </ul>
+            </div>
+
+            <!-- 4 -->
+            <div class="slide">
+                <span class="icon">❤️</span>
+                <h2>Кто такой Патриот?</h2>
+                <p>Патриот — тот, кто любит Родину на деле, а не на словах.</p>
+                <ul>
+                    <li>🌟 Гордится подвигами прадедов в ВОВ (Брестская крепость).</li>
+                    <li>🌟 Любит малую родину: не мусорит, помогает.</li>
+                    <li>🌟 Уважает старших и помогает младшим.</li>
+                </ul>
+            </div>
+
+            <!-- 5 -->
+            <div class="slide">
+                <span class="icon">🤝</span>
+                <h2>«Шефская вертикаль»</h2>
+                <p>Наша школьная программа наставничества.</p>
+                <ul>
+                    <li>👨‍🏫 Старшие (шефы) передают опыт младшим.</li>
+                    <li>🌱 Младшие берут пример со старших.</li>
+                    <li>💪 Вместе мы — сила!</li>
+                </ul>
+            </div>
+
+            <!-- 6 -->
+            <div class="slide">
+                <span class="icon">📱</span>
+                <h2>Правила игры</h2>
+                <ul>
+                    <li>1. Сейчас появится QR-код.</li>
+                    <li>2. Сканируйте его телефоном.</li>
+                    <li>3. Введите имя и ждите старта.</li>
+                    <li>4. Отвечайте. За правильный ответ — балл!</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="presentation-controls">
+            <button id="prev-slide" class="btn-nav secondary hidden">← Назад</button>
+            <button id="next-slide" class="btn-nav">Далее →</button>
+        </div>
+    </div>
+
+    <!-- ПОДКЛЮЧЕНИЕ -->
+    <div id="setup-screen" class="screen hidden">
+        <h1>Квиз <span class="accent">«Гражданин и Патриот»</span></h1>
+        <p style="font-size:1.3rem;">Сканируйте QR-код:</p>
+        <div id="qrcode-container"><div id="qrcode"></div></div>
+        <div id="room-code">------</div>
+        
+        <div style="margin-top: 15px;">
+            <p style="font-size:1.2rem;">Сложность:</p>
+            <button class="btn-difficulty" data-level="easy">Лёгкий</button>
+            <button class="btn-difficulty" data-level="medium">Средний</button>
+            <button class="btn-difficulty" data-level="hard">Сложный</button>
+        </div>
+        <button id="start-btn" class="btn-start" disabled style="margin-top: 20px;">Начать игру</button>
+        <div id="player-list"></div>
+    </div>
+
+    <!-- ВОПРОСЫ -->
+    <div id="game-screen" class="screen hidden">
+        <div id="question-display"></div>
+        <div id="options-display"></div>
+        <div id="answers-count"></div>
+        <button id="next-btn" class="btn-start" style="display: none;">Далее →</button>
+        <div id="comment-box"></div>
+    </div>
+
+    <!-- ИТОГИ -->
+    <div id="end-screen" class="screen hidden">
+        <h1>🏆 Итоги</h1>
+        <div id="leaderboard" style="width: 100%; max-width: 800px;"></div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        // конфиг
+        var firebaseConfig = {
+            apiKey: "AIzaSyCH9xxkxYJh9AyvijYtXRfJxxyeHpi4VAs",
+            authDomain: "shef-vertical-quiz.firebaseapp.com",
+            databaseURL: "https://shef-vertical-quiz-default-rtdb.firebaseio.com",
+            projectId: "shef-vertical-quiz",
+            storageBucket: "shef-vertical-quiz.firebasestorage.app",
+            messagingSenderId: "1018774801808",
+            appId: "1:1018774801808:web:574527c619434f7128f715"
+        };
+        firebase.initializeApp(firebaseConfig);
+        var db = firebase.database();
+
+        // elements
+        var presentationScreen = document.getElementById('presentation-screen');
+        var setupScreen = document.getElementById('setup-screen');
+        var gameScreen = document.getElementById('game-screen');
+        var endScreen = document.getElementById('end-screen');
+        
+        var slides = document.querySelectorAll('.slide');
+        var prevSlideBtn = document.getElementById('prev-slide');
+        var nextSlideBtn = document.getElementById('next-slide');
+        
+        var roomCodeEl = document.getElementById('room-code');
+        var qrcodeEl = document.getElementById('qrcode');
+        var startBtn = document.getElementById('start-btn');
+        var questionDisplay = document.getElementById('question-display');
+        var optionsDisplay = document.getElementById('options-display');
+        var answersCount = document.getElementById('answers-count');
+        var nextBtn = document.getElementById('next-btn');
+        var playerListEl = document.getElementById('player-list');
+        var leaderboardEl = document.getElementById('leaderboard');
+        var commentBox = document.getElementById('comment-box');
+        var difficultyBtns = document.querySelectorAll('.btn-difficulty');
+
+        var roomCode = null;
+        var currentQuestionIndex = 0;
+        var players = {};
+        var answers = {};
+        var currentQuestions = [];
+        var selectedDifficulty = 'easy';
+        var currentSlideIndex = 0;
+
+        // слайды
+        function updateSlides() {
+            for (var i = 0; i < slides.length; i++) {
+                if (i === currentSlideIndex) slides[i].classList.add('active');
+                else slides[i].classList.remove('active');
+            }
+            
+            if (currentSlideIndex === 0) prevSlideBtn.classList.add('hidden');
+            else prevSlideBtn.classList.remove('hidden');
+            
+            if (currentSlideIndex === slides.length - 1) nextSlideBtn.textContent = 'К QR-коду →';
+            else nextSlideBtn.textContent = 'Далее →';
+        }
+
+        nextSlideBtn.onclick = function() {
+            if (currentSlideIndex < slides.length - 1) {
+                currentSlideIndex++;
+                updateSlides();
+            } else {
+                presentationScreen.classList.add('hidden');
+                setupScreen.classList.remove('hidden');
+            }
+        };
+
+        prevSlideBtn.onclick = function() {
+            if (currentSlideIndex > 0) {
+                currentSlideIndex--;
+                updateSlides();
+            }
+        };
+
+        // сложность
+        for (var j = 0; j < difficultyBtns.length; j++) {
+            difficultyBtns[j].addEventListener('click', function() {
+                for (var k = 0; k < difficultyBtns.length; k++) {
+                    difficultyBtns[k].classList.remove('selected');
+                }
+                this.classList.add('selected');
+                selectedDifficulty = this.getAttribute('data-level');
+            });
+        }
+        difficultyBtns[0].classList.add('selected');
+
+        function initHost() {
+            roomCode = Math.floor(100000 + Math.random() * 900000).toString();
+            roomCodeEl.textContent = roomCode;
+
+            qrcodeEl.innerHTML = '';
+            var baseUrl;
+            if (window.location.protocol === 'file:') {
+                baseUrl = 'https://zhesny.github.io/shef-vertical-quiz/';
+            } else {
+                baseUrl = window.location.origin + window.location.pathname.replace('index.html', '').replace(/\/$/, '') + '/';
+            }
+            var playerUrl = baseUrl + 'player.html?room=' + roomCode;
+            
+            new QRCode(qrcodeEl, { 
+                text: playerUrl, 
+                width: 200, 
+                height: 200, 
+                colorDark : "#000000", 
+                colorLight : "#ffffff", 
+                correctLevel : QRCode.CorrectLevel.H 
+            });
+
+            db.ref('rooms/' + roomCode).set({ status: 'waiting', currentQuestion: -1, correctAnswer: -1 });
+
+            db.ref('rooms/' + roomCode + '/players').on('value', function(snapshot) {
+                players = snapshot.val() || {};
+                var names = [];
+                for(var id in players) { names.push(players[id].name); }
+                
+                if (names.length > 0) playerListEl.textContent = 'В игре (' + names.length + '): ' + names.join(', ');
+                else playerListEl.textContent = 'Ожидание игроков...';
+                
+                startBtn.disabled = names.length === 0;
+            });
+            
+            startBtn.onclick = function() { startGame(); };
+        }
+
+        function startGame() {
+            currentQuestions = quizData[selectedDifficulty];
+            setupScreen.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+            currentQuestionIndex = 0;
+            
+            db.ref('rooms/' + roomCode + '/status').set('playing');
+            db.ref('rooms/' + roomCode + '/difficulty').set(selectedDifficulty);
+            showQuestion(0);
+        }
+
+        function showQuestion(index) {
+            if (index >= currentQuestions.length) {
+                endGame();
+                return;
+            }
+            currentQuestionIndex = index;
+            var q = currentQuestions[index];
+            
+            db.ref('rooms/' + roomCode + '/currentQuestion').set(index);
+            db.ref('rooms/' + roomCode + '/correctAnswer').set(-1);
+            db.ref('rooms/' + roomCode + '/answers').remove();
+
+            questionDisplay.textContent = (index + 1) + ". " + q.question;
+            optionsDisplay.innerHTML = '';
+            commentBox.style.display = 'none';
+            nextBtn.style.display = 'none';
+
+            q.options.forEach(function(opt, i) {
+                var div = document.createElement('div');
+                div.className = 'option';
+                div.textContent = String.fromCharCode(65 + i) + ") " + opt;
+                optionsDisplay.appendChild(div);
+            });
+
+            answersCount.textContent = 'Ждем ответы...';
+
+            db.ref('rooms/' + roomCode + '/answers').on('value', function(snapshot) {
+                answers = snapshot.val() || {};
+                var count = Object.keys(answers).length;
+                var total = Object.keys(players).length;
+                answersCount.textContent = "Ответили: " + count + " / " + total;
+                
+                if (count >= total && total > 0 && nextBtn.style.display !== 'inline-block') {
+                    revealAnswer();
+                }
+            });
+        }
+
+        function revealAnswer() {
+            db.ref('rooms/' + roomCode + '/answers').off();
+            var q = currentQuestions[currentQuestionIndex];
+            var optionDivs = optionsDisplay.children;
+
+            db.ref('rooms/' + roomCode + '/correctAnswer').set(q.correct);
+
+            for (var i = 0; i < optionDivs.length; i++) {
+                if (i === q.correct) optionDivs[i].classList.add('correct');
+                else optionDivs[i].classList.add('incorrect');
+            }
+
+            if (q.comment) {
+                commentBox.innerHTML = "<strong>📖 Пояснение:</strong> " + q.comment;
+                commentBox.style.display = 'block';
+            }
+
+            var updates = {};
+            for (var playerId in answers) {
+                if (answers[playerId].answer === q.correct) {
+                    var currentScore = players[playerId].score || 0;
+                    updates['rooms/' + roomCode + '/players/' + playerId + '/score'] = currentScore + 1;
+                }
+            }
+            if (Object.keys(updates).length > 0) db.ref().update(updates);
+
+            nextBtn.style.display = 'inline-block';
+            nextBtn.onclick = function() { 
+                nextBtn.style.display = 'none'; 
+                showQuestion(currentQuestionIndex + 1); 
+            };
+        }
+
+        function endGame() {
+            gameScreen.classList.add('hidden');
+            endScreen.classList.remove('hidden');
+            db.ref('rooms/' + roomCode + '/status').set('ended');
+            
+            // сортировка
+            var sortedArray = [];
+            for (var pid in players) {
+                sortedArray.push([pid, players[pid]]);
+            }
+            sortedArray.sort(function(a, b) { return (b[1].score || 0) - (a[1].score || 0); });
+            
+            var html = "";
+            for (var i = 0; i < sortedArray.length; i++) {
+                html += '<div style="display: flex; justify-content: space-between; font-size: 1.5rem; padding: 10px; border-bottom: 1px solid #ccc;">';
+                html += '<span>' + (i+1) + '. ' + sortedArray[i][1].name + '</span>';
+                html += '<span style="color: var(--red); font-weight: bold;">' + (sortedArray[i][1].score || 0) + ' б.</span>';
+                html += '</div>';
+            }
+            leaderboardEl.innerHTML = html;
+        }
+
+        initHost();
+        updateSlides();
+    </script>
+</body>
+</html>
